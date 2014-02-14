@@ -16,17 +16,19 @@
 #
 # ------------------------------------------------------------------------------
 
-LOG_FILE = 'adauth.log'
+LOG_FILE='adauth.log'
 
-PKG_UTIL = 'yum -y install'
-PKG_DEPS = 'authconfig krb5-workstation oddjob-mkhomedir pam_krb5 samba-common sssd'
+PKG_UTIL='yum -y install'
+PKG_DEPS='authconfig krb5-workstation oddjob-mkhomedir pam_krb5 samba-common sssd'
 
-KERBEROS_CONFIG = '/etc/krb5.conf'
-SAMBA_CONFIG = '/etc/samba/smb.conf'
-SSSD_CONFIG = '/etc/sssd/sssd.conf'
-SUDO_CONFIG = '/etc/sudoers.d/domain'
+KERBEROS_CONFIG='/etc/krb5.conf'
+SAMBA_CONFIG='/etc/samba/smb.conf'
+SSSD_CONFIG='/etc/sssd/sssd.conf'
+SUDO_CONFIG='/etc/sudoers.d/domain'
 
-BACKUP_POSTFIX = 'adauth'
+BACKUP_POSTFIX='adauth'
+
+cat /dev/null >$LOG_FILE
 
 # ------------------------------------------------------------------------------
 
@@ -48,11 +50,11 @@ BACKUP_POSTFIX = 'adauth'
 function libadauth_install_deps
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	$1 $2 1>$LOG_FILE 2>&1
+	$1 $2 1>>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -82,11 +84,13 @@ function libadauth_install_deps
 function libadauth_kerberos_backup
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	no | cp -v $1 $1.$2 1>$LOG_FILE 2>&1
+	if [ ! -f "$1.$2" ]; then
+		cp -fv "$1" "$1.$2" 1>>$LOG_FILE 2>&1
+	fi
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -113,11 +117,13 @@ function libadauth_kerberos_backup
 function libadauth_kerberos_restore
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	mv -fv $1.2 $1 1>$LOG_FILE 2>&1
+	if [ -f "$1.$2" ]; then
+		mv -fv "$1.$2" "$1" 1>>$LOG_FILE 2>&1
+	fi
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -144,14 +150,14 @@ function libadauth_kerberos_restore
 function libadauth_kerberos_config
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
 	# Convert domain FQDN to uppercase string
 	local DOMAIN_FQDN=$(echo $2 | tr '[:lower:]' '[:upper:]')
 
-	authconfig --enablekrb5 --enablekrb5kdcdns --enablekrb5realmdns --krb5realm=$DOMAIN_FQDN --update 1>$LOG_FILE 2>&1
+	authconfig --enablekrb5 --enablekrb5kdcdns --enablekrb5realmdns --krb5realm=$DOMAIN_FQDN --update >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -161,14 +167,14 @@ function libadauth_kerberos_config
 	sed -e '/\[libdefaults\]/{:a;n;/^$/!ba;i\
  default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac \
  default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac \
- permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac' -e '}' -i $1 1>$LOG_FILE 2>&1
+ permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac' -e '}' -i $1 >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
 	# Delete example strings from config
-	sed -e '/EXAMPLE.COM = {/,/}/d' -e '/example.com/d' -i $1 1>$LOG_FILE 2>&1
+	sed -e '/EXAMPLE.COM = {/,/}/d' -e '/example.com/d' -i $1 >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -198,11 +204,13 @@ function libadauth_kerberos_config
 function libadauth_samba_backup
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	no | cp -v $1 $1.$2 1>$LOG_FILE 2>&1
+	if [ ! -f "$1.$2" ]; then
+		cp -fv "$1" "$1.$2" >>$LOG_FILE 2>&1
+	fi
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -229,11 +237,13 @@ function libadauth_samba_backup
 function libadauth_samba_restore
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	mv -fv $1.2 $1 1>$LOG_FILE 2>&1
+	if [ -f "$1.$2" ]; then
+		mv -fv "$1.$2" "$1" >>$LOG_FILE 2>&1
+	fi
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -261,7 +271,7 @@ function libadauth_samba_restore
 function libadauth_samba_config
 {
 	if [ $# -ne 3 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ] || [ "x$3" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
@@ -269,7 +279,7 @@ function libadauth_samba_config
 	local DOMAIN_NBNAME=$(echo $2 | tr '[:lower:]' '[:upper:]')
 	local DOMAIN_FQDN=$(echo $3 | tr '[:lower:]' '[:upper:]')
 
-	authconfig --smbsecurity=ads --smbworkgroup=$DOMAIN_NBNAME --smbrealm=$DOMAIN_FQDN --update 1>$LOG_FILE 2>&1
+	authconfig --smbsecurity=ads --smbworkgroup=$DOMAIN_NBNAME --smbrealm=$DOMAIN_FQDN --update >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -282,7 +292,7 @@ function libadauth_samba_config
    client use spnego = yes \
    kerberos method = secrets and keytab \
    password server = * \
-' -i $1 1>$LOG_FILE 2>&1
+' -i $1 >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -312,12 +322,12 @@ function libadauth_samba_config
 function libadauth_sssd_backup
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	if [ -f $1 ]; then
-		no | cp -v $1 $1.$2 1>$LOG_FILE 2>&1
+	if [ -f "$1" ] && [ ! -f "$1.$2" ]; then
+		cp -fv "$1" "$1.$2" >>$LOG_FILE 2>&1
 	fi
 
 	if [ $? -ne 0 ]; then
@@ -345,14 +355,14 @@ function libadauth_sssd_backup
 function libadauth_sssd_restore
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	if [ -f $1.$2 ]; then
-		mv -fv $1.2 $1 1>$LOG_FILE 2>&1
+	if [ -f "$1.$2" ]; then
+		mv -fv "$1.$2" "$1" >>$LOG_FILE 2>&1
 	else
-		rm -fv $1 1>$LOG_FILE 2>&1
+		rm -fv "$1" >>$LOG_FILE 2>&1
 	fi
 
 	if [ $? -ne 0 ]; then
@@ -383,7 +393,7 @@ function libadauth_sssd_restore
 function libadauth_sssd_config
 {
 	if [ $# -ne 3 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ] || [ "x$3" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
@@ -393,19 +403,19 @@ function libadauth_sssd_config
 	# Get host's Kerberos shortname
 	local KERBEROS_SHORTNAME=$(klist -k | tail -n 1 | awk '{print $2}')
 
-	chkconfig messagebus on 1>$LOG_FILE 2>&1
+	chkconfig messagebus on >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	service messagebus restart 1>$LOG_FILE 2>&1
+	service messagebus restart >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	authconfig --enablesssdauth --enablesssd --enablelocauthorize --enablemkhomedir --update 1>$LOG_FILE 2>&1
+	authconfig --enablesssdauth --enablesssd --enablelocauthorize --enablemkhomedir --update >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -437,40 +447,42 @@ function libadauth_sssd_config
   ldap_access_filter = $3
   #simple_allow_groups = Linux Admins
   cache_credentials = false
-" >$1 2>$LOG_FILE
+" >$1 2>>$LOG_FILE
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	chown root:root $1 1>$LOG_FILE 2>&1
+	chown root:root $1 >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	chmod 600 $1 1>$LOG_FILE 2>&1
+	chmod 600 $1 >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	chkconfig sssd on 1>$LOG_FILE 2>&1
+	chkconfig sssd on >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	service sssd restart 1>$LOG_FILE 2>&1
+	service sssd restart >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	service sshd restart 1>$LOG_FILE 2>&1
+	service sshd restart >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
+	else
+		return 0
 	fi
 }
 
@@ -495,12 +507,12 @@ function libadauth_sssd_config
 function libadauth_sudo_backup
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	if [ -f $1 ]; then
-		no | cp -v $1 $1.$2 1>$LOG_FILE 2>&1
+	if [ -f "$1" ] && [ ! -f "$1.$2" ]; then
+		cp -v "$1" "$1.$2" >>$LOG_FILE 2>&1
 	fi
 
 	if [ $? -ne 0 ]; then
@@ -528,14 +540,14 @@ function libadauth_sudo_backup
 function libadauth_sudo_restore
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	if [ -f $1.$2 ]; then
-		mv -fv $1.2 $1 1>$LOG_FILE 2>&1
+	if [ -f "$1.$2" ]; then
+		mv -fv "$1.$2" "$1" >>$LOG_FILE 2>&1
 	else
-		rm -fv $1 1>$LOG_FILE 2>&1
+		rm -fv "$1" >>$LOG_FILE 2>&1
 	fi
 
 	if [ $? -ne 0 ]; then
@@ -562,16 +574,16 @@ function libadauth_sudo_restore
 function libadauth_sudo_config
 {
 	if [ $# -ne 2 ] || [ "x$1" == 'x' ] || [ "x$2" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
 	# Temp file for sudoers data
-	local SUDOERS_TEMP_FILE = $(mktemp)
+	local SUDOERS_TEMP_FILE=$(mktemp)
 
 	# Prepare restricted groups string for sudoers
 	# Split string by commas, remove forwarding and trailing spaces, add prefix (%), protect spaces, build new string
-	local LDAP_GROUPS = $(echo $2 |  tr ',' '\n' | sed -e 's/^ *//g' -e 's/ *$//g' -e 's/.*/\%&/' -e 's/ /\\ /' | paste -d ',' | sed 's/,$//')
+	local LDAP_GROUPS=$(echo $2 | tr ',' '\n' | sed -e 's/^ *//g' -e 's/ *$//g' -e 's/.*/\%&/' -e 's/ /\\ /' | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
 
 	echo "
 User_Alias LINADMINS = $LDAP_GROUPS
@@ -579,28 +591,30 @@ User_Alias WINADMINS = %Domain\ Admins, %Enterprise\ Admins
 
 LINADMINS ALL=(ALL) ALL
 WINADMINS ALL=(ALL) ALL
-" $SUDOERS_TEMP_FILE 2>$LOG_FILE
+" >$SUDOERS_TEMP_FILE 2>>$LOG_FILE
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	chown root:root $SUDOERS_TEMP_FILE 1>$LOG_FILE 2>&1
+	chown root:root $SUDOERS_TEMP_FILE >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	chmod 0440 $SUDOERS_TEMP_FILE 1>$LOG_FILE 2>&1
+	chmod 0440 $SUDOERS_TEMP_FILE >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	mv $SUDOERS_TEMP_FILE $1 1>$LOG_FILE 2>&1
+	mv -v $SUDOERS_TEMP_FILE $1 >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
+	else
+		return 0
 	fi
 }
 
@@ -625,17 +639,17 @@ WINADMINS ALL=(ALL) ALL
 function libadauth_domain_join
 {
 	if [ $# -ne 1 ] || [ "x$1" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	kinit "$1" 2>$LOG_FILE
+	kinit "$1" 2>>$LOG_FILE
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	net ads join osName=$(awk '{print $1}' /etc/system-release) osVersion=$(awk '{print $3}' /etc/system-release) -k 1>$LOG_FILE 2>&1
+	net ads join osName=$(awk '{print $1}' /etc/system-release) osVersion=$(awk '{print $3}' /etc/system-release) -k >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1
@@ -661,17 +675,17 @@ function libadauth_domain_join
 function libadauth_domain_leave
 {
 	if [ $# -ne 1 ] || [ "x$1" == 'x' ]; then
-		echo "ERROR: $FUNCNAME -- Missing arguments" >$LOG_FILE
+		echo "ERROR: $FUNCNAME -- Missing arguments" >>$LOG_FILE
 		return 1
 	fi
 
-	net ads leave -U "$1" 2>$LOG_FILE
+	net ads leave -U "$1" 2>>$LOG_FILE
 
 	if [ $? -ne 0 ]; then
 		return 1
 	fi
 
-	kdestroy 1>$LOG_FILE 2>&1
+	kdestroy -A >>$LOG_FILE 2>&1
 
 	if [ $? -ne 0 ]; then
 		return 1

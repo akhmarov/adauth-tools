@@ -80,73 +80,81 @@ fi
 
 echo -n 'Installing packages...'
 
-libadauth_install_deps $PKG_UTIL $PKG_DEPS
+$(libadauth_install_deps "$PKG_UTIL" "$PKG_DEPS")
 
 if [ $? -eq 0 ]; then
 	echo ' [OK]'
 else
 	echo ' [FAIL]'
 	echo ''
-	echo "There was errors during setup process. See $LOG_FILE for details"
+	echo "There were errors during setup process. See $LOG_FILE for details"
 
 	exit 1
 fi
 
 echo -n 'Backing up configs...'
 
-RET_KRB = libadauth_backup_kerberos $KERBEROS_CONFIG $BACKUP_POSTFIX
-RET_SMB = libadauth_backup_samba $SAMBA_CONFIG $BACKUP_POSTFIX
-RET_SSS = libadauth_backup_sssd $SSSD_CONFIG $BACKUP_POSTFIX
-RET_SUD = libadauth_backup_sudo $SUDO_CONFIG $BACKUP_POSTFIX
+$(libadauth_kerberos_backup "$KERBEROS_CONFIG" "$BACKUP_POSTFIX")
+RET_KRB=$?
+$(libadauth_samba_backup "$SAMBA_CONFIG" "$BACKUP_POSTFIX")
+RET_SMB=$?
+$(libadauth_sssd_backup "$SSSD_CONFIG" "$BACKUP_POSTFIX")
+RET_SSS=$?
+$(libadauth_sudo_backup "$SUDO_CONFIG" "$BACKUP_POSTFIX")
+RET_SUD=$?
 
-if [ $RET_KRB -eq 0 ] && [ $RET_SMB -eq 0 ] && [ $RET_SSS -eq 0 ] && [ $RET_SUD -eq 0 ]; then
+if [ $RET_KRB -eq 0 ]  && [ $RET_SMB -eq 0 ] && [ $RET_SSS -eq 0 ] && [ $RET_SUD -eq 0 ]; then
 	echo ' [OK]'
 else
 	echo ' [FAIL]'
 	echo ''
-	echo "There was errors during setup process. See $LOG_FILE for details"
+	echo "There were errors during setup process. See $LOG_FILE for details"
 
 	exit
 fi
 
 echo -n 'Configuring Kerberos/Samba...'
 
-RET_KRB = libadauth_config_kerberos $KERBEROS_CONFIG $DOMAIN_FQDN
-RET_SMB = libadauth_config_samba $SAMBA_CONFIG $DOMAIN_NBNAME $DOMAIN_FQDN
+$(libadauth_kerberos_config "$KERBEROS_CONFIG" "$DOMAIN_FQDN")
+RET_KRB=$?
+$(libadauth_samba_config "$SAMBA_CONFIG" "$DOMAIN_NBNAME" "$DOMAIN_FQDN")
+RET_SMB=$?
 
 if [ $RET_KRB -eq 0 ] && [ $RET_SMB -eq 0 ]; then
 	echo ' [OK]'
 else
 	echo ' [FAIL]'
 	echo ''
-	echo "There was errors during setup process. See $LOG_FILE for details"
+	echo "There were errors during setup process. See $LOG_FILE for details"
 
 	exit
 fi
 
-echo -n 'Joining Active Directory...'
+echo 'Joining Active Directory...'
 
-libadauth_domain_join $DOMAIN_USER
+libadauth_domain_join "$DOMAIN_USER"
 
 if [ $? -ne 0 ]; then
 	echo ' [FAIL]'
 	echo ''
-	echo "There was errors during setup process. See $LOG_FILE for details"
+	echo "There were errors during setup process. See $LOG_FILE for details"
 
 	exit 1
 fi
 
 echo -n 'Configuring SSSD/Sudo...'
 
-RET_SSS = libadauth_config_sssd $SSSD_CONFIG $DOMAIN_FQDN $LDAP_FILTER
-RET_SUD = libadauth_config_sudo $SUDO_CONFIG $LDAP_GROUPS
+$(libadauth_sssd_config "$SSSD_CONFIG" "$DOMAIN_FQDN" "$LDAP_FILTER")
+RET_SSS=$?
+$(libadauth_sudo_config "$SUDO_CONFIG" "$LDAP_GROUPS")
+RET_SUD=$?
 
 if [ $RET_SSS -eq 0 ] && [ $RET_SUD -eq 0 ]; then
 	echo ' [OK]'
 else
 	echo ' [FAIL]'
 	echo ''
-	echo "There was errors during setup process. See $LOG_FILE for details"
+	echo "There were errors during setup process. See $LOG_FILE for details"
 
 	exit
 fi

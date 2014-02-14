@@ -56,31 +56,35 @@ fi
 #   2. Restore config files
 #
 
-echo -n 'Leaving Active Directory...'
+echo 'Leaving Active Directory...'
 
 libadauth_domain_leave $DOMAIN_USER
 
 if [ $? -ne 0 ]; then
 	echo ' [FAIL]'
 	echo ''
-	echo "There was errors during setup process. See $LOG_FILE for details"
+	echo "There were errors during setup process. See $LOG_FILE for details"
 
 	exit 1
 fi
 
 echo -n 'Restoring configs...'
 
-RET_KRB = libadauth_restore_kerberos $KERBEROS_CONFIG $BACKUP_POSTFIX
-RET_SMB = libadauth_restore_samba $SAMBA_CONFIG $BACKUP_POSTFIX
-RET_SSS = libadauth_restore_sssd $SSSD_CONFIG $BACKUP_POSTFIX
-RET_SUD = libadauth_restore_sudo $SUDO_CONFIG $BACKUP_POSTFIX
+$(libadauth_kerberos_restore $KERBEROS_CONFIG $BACKUP_POSTFIX)
+RET_KRB=$?
+$(libadauth_samba_restore $SAMBA_CONFIG $BACKUP_POSTFIX)
+RET_SMB=$?
+$(libadauth_sssd_restore $SSSD_CONFIG $BACKUP_POSTFIX)
+RET_SSS=$?
+$(libadauth_sudo_restore $SUDO_CONFIG $BACKUP_POSTFIX)
+RET_SUD=$?
 
 if [ $RET_KRB -eq 0 ] && [ $RET_SMB -eq 0 ] && [ $RET_SSS -eq 0 ] && [ $RET_SUD -eq 0 ]; then
 	echo ' [OK]'
 else
 	echo ' [FAIL]'
 	echo ''
-	echo "There was errors during setup process. See $LOG_FILE for details"
+	echo "There were errors during setup process. See $LOG_FILE for details"
 
-	exit
+	exit 1
 fi

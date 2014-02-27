@@ -1,2 +1,14 @@
 This is a collection of shell (Bash) scripts which main purpose is to manage
 Active Directory join/leave process.
+
+
+Examples
+
+To join AD and allow members of group CONTOSO\Linux Admins to manage the box type:
+./adauth-join.sh -d contoso.com -n contoso -u administrator -f 'memberOf=CN=Linux Admins,OU=Groups,DC=contoso,DC=com’ -g 'Linux Admins'
+
+To join AD and allow members of groups CONTOSO\Linux Admins and CONTOSO\Print Admins to manage the box type:
+./adauth-join.sh -d contoso.com -n contoso -u administrator -f '(|(memberOf=CN=Linux Admins,OU=Groups,DC=contoso,DC=com)(memberOf=CN=Print Admins,OU=Groups,DC=contoso,DC=com))’ -g 'Linux Admins, Print Admins'
+
+To leave AD type:
+./adauth-leave.sh -u administrator
